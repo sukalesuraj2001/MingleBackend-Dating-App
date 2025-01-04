@@ -9,7 +9,7 @@ async function bootstrap() {
     .setTitle('API Documentation')
     .setDescription('The API documentation for my Mingle App')
     .setVersion('1.0')
-    .addTag('cats') // Optional, add tags for grouping routes
+    .addTag('Mingle App Swagger')
     .build();
 
   // Create Swagger document
