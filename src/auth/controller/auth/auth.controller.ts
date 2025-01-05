@@ -1,8 +1,8 @@
 import { Controller, Post, Body, Param, HttpException, HttpStatus, Get } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { CreateUser, VerifyOtp, UpdateProfile, UpdateGender, UpdateInterests, GetAllUsers } from 'src/auth/decorators/auth.decorator';
-import { CreateUserDto, UpdateProfileDto, UpdateGenderDto, UpdateInterestsDto, GetUserDto } from 'src/auth/dto/user.dto';
+import { CreateUser, VerifyOtp, UpdateProfile, UpdateGender, UpdateInterests, GetAllUsers, UpdatePassword, GetUserByMobileNumber, loginUser } from 'src/auth/decorators/auth.decorator';
+import { CreateUserDto, UpdateProfileDto, UpdateGenderDto, UpdateInterestsDto, GetUserDto, PasswordDto, LoginDto } from 'src/auth/dto/user.dto';
 import { User } from 'src/auth/entity/user.entity';
 import { AuthService } from 'src/auth/services/auth/auth.service';
 
@@ -22,6 +22,28 @@ export class AuthController {
                 console.error(error);
                 throw new HttpException(
                     { success: false, message: error.response.message || 'Error creating user. Please try again.' },
+                    HttpStatus.BAD_REQUEST,
+                );
+            }),
+        );
+    }
+
+
+    // Endpoint to update password 
+    @UpdatePassword()
+    @Post('update-password/:userId')
+    updatePassword(
+        @Param('userId') userId: string,
+        @Body() passwordDto: PasswordDto,
+    ): Observable<{ success: boolean; message: string }> {
+        return this.authService.updatePassword(userId, passwordDto.password).pipe(
+            map(() => {
+                return { success: true, message: 'Password updated successfully.' };
+            }),
+            catchError((error) => {
+                console.error(error);
+                throw new HttpException(
+                    { success: false, message: 'Error updating password. Please try again.' },
                     HttpStatus.BAD_REQUEST,
                 );
             }),
@@ -118,6 +140,38 @@ export class AuthController {
                 throw new HttpException(
                     { success: false, message: 'Error retrieving users.' },
                     HttpStatus.INTERNAL_SERVER_ERROR,
+                );
+            }),
+        );
+    }
+    @GetUserByMobileNumber()
+    @Get('get-user-by-mobile/:mobileNumber')
+    getUserByMobileNumber(
+        @Param('mobileNumber') mobileNumber: string,
+    ): Observable<GetUserDto> {
+        return this.authService.getUserByMobileNumber(mobileNumber).pipe(
+            catchError((error) => {
+                console.error(error);
+                throw new HttpException(
+                    {
+                        success: false,
+                        message: error?.message || 'Error retrieving user. Please try again.',
+                    },
+                    HttpStatus.BAD_REQUEST,
+                );
+            }),
+        );
+    }
+
+    @loginUser()
+    @Post('login')
+    login(@Body() loginDto: LoginDto): Observable<{ success: boolean; message: string; token?: string }> {
+        return this.authService.login(loginDto).pipe(
+            catchError((error) => {
+                console.error(error);
+                throw new HttpException(
+                    { success: false, message: 'Invalid credentials or error logging in. Please try again.' },
+                    HttpStatus.BAD_REQUEST,
                 );
             }),
         );

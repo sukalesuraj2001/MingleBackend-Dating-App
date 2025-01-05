@@ -10,6 +10,11 @@ export class User {
   @Column({ type: 'varchar', length: 15, nullable: true })
   mobile_number: string;
 
+    // User's password, stored as a hashed string
+    @Column({ type: 'varchar', length: 255, nullable: true }) // Make password nullable
+    password: string;
+  
+
   // Flag to check if the user has verified their OTP
   @Column({ type: 'boolean', default: false })
   otp_verified: boolean;
