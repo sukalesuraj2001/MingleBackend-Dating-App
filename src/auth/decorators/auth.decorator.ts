@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { CreateUserDto, UpdateProfileDto, UpdateGenderDto, UpdateInterestsDto, GetUserDto } from '../dto/user.dto';
+import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CreateUserDto, UpdateProfileDto, UpdateGenderDto, UpdateInterestsDto, GetUserDto, LoginDto } from '../dto/user.dto';
 
 // Swagger decorator for creating a user
 export function CreateUser() {
@@ -22,6 +22,47 @@ export function CreateUser() {
   );
 }
 
+
+export function UpdatePassword() {
+  return applyDecorators(
+    // Swagger operation summary
+    ApiOperation({ summary: 'Add user password' }),
+
+    // Swagger body description
+    ApiBody({
+      description: 'Password update payload',
+      schema: {
+        type: 'object',
+        properties: {
+          password: {
+            type: 'string',
+            example: 'StrongPassword@123',
+            description: 'New password for the user',
+          },
+        },
+        required: ['password'],
+      },
+    }),
+
+    // Swagger response for successful password update
+    ApiResponse({
+      status: 200,
+      description: 'Password updated successfully.',
+    }),
+
+    // Swagger response for bad requests
+    ApiResponse({
+      status: 400,
+      description: 'Bad Request. Invalid input or missing data.',
+    }),
+
+    // Swagger response for user not found
+    ApiResponse({
+      status: 404,
+      description: 'User not found.',
+    }),
+  );
+}
 // Swagger decorator for verifying OTP
 export function VerifyOtp() {
   return applyDecorators(
@@ -103,6 +144,53 @@ export function GetAllUsers() {
     ApiResponse({
       status: 200,
       description: 'Users get successfully',
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Bad Request. Invalid input or missing data.',
+    }),
+  );
+}
+
+// Swagger decorator for Getting  Users by mobile number
+export function GetUserByMobileNumber() {
+  return applyDecorators(
+    ApiOperation({ summary: 'Fetch user details by mobile number' }),
+    ApiParam({
+      name: 'mobileNumber',
+      description: 'Mobile number of the user to search for',
+      example: '1234567890',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'User details retrieved successfully.',
+      type: GetUserDto,
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'User not found with this mobile number.',
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Error retrieving user.',
+    }),
+  );
+}
+
+
+// Swagger decorator for login user
+
+export function loginUser() {
+  return applyDecorators(
+    ApiOperation({ summary: 'Login user' }),
+    ApiBody({
+      description: 'Login user',
+      type: LoginDto,
+      required: true,
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'User login Successfully!',
     }),
     ApiResponse({
       status: 400,

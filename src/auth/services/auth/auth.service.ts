@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Observable, from } from 'rxjs';
+import { Observable, catchError, from, map, of } from 'rxjs';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { User } from 'src/auth/entity/user.entity';
-import { CreateUserDto, GetUserDto } from 'src/auth/dto/user.dto';
+import { CreateUserDto, GetUserDto, LoginDto } from 'src/auth/dto/user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +36,28 @@ export class AuthService {
       })
     );
   }
+
+
+  // Create a new user password
+  updatePassword(userId: string, password: string): Observable<void> {
+    const saltRounds = 10; // Number of salt rounds for bcrypt
+
+    return from(
+      this.userRepository.findOne({ where: { user_id: userId } }).then((user) => {
+        if (!user) {
+          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+        }
+
+        // Hash the password before saving
+        return bcrypt.hash(password, saltRounds).then((hashedPassword) => {
+          user.password = hashedPassword;
+          user.signup_status = 'add-password';
+          return this.userRepository.save(user).then(() => { });
+        });
+      }),
+    );
+  }
+
 
   // Verify OTP
   verifyOtp(userId: string): Observable<User> {
@@ -86,7 +109,7 @@ export class AuthService {
 
 
 
-getAllUsers(): Observable<GetUserDto[]> {
+  getAllUsers(): Observable<GetUserDto[]> {
     return from(
       this.userRepository.find().then((users) => {
         return users.map((user) => {
@@ -105,4 +128,74 @@ getAllUsers(): Observable<GetUserDto[]> {
       }),
     );
   }
+
+
+  // get user data on the basis of mobie number 
+
+  getUserByMobileNumber(mobileNumber: string): Observable<GetUserDto> {
+    return from(
+      this.userRepository.findOne({ where: { mobile_number: mobileNumber } }).then((user) => {
+        if (!user) {
+          throw new HttpException(
+            { success: false, message: 'User not found with this mobile number.' },
+            HttpStatus.NOT_FOUND,
+          );
+        }
+        return {
+          user_id: user.user_id,
+          mobile_number: user.mobile_number,
+          otp_verified: user.otp_verified,
+          profile_details: user.profile_details,
+          gender: user.gender,
+          interests: user.interests,
+          signup_status: user.signup_status,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+        };
+      }),
+    );
+  }
+
+
+
+  login(loginDto: LoginDto): Observable<{ success: boolean; message: string; token?: string }> {
+    return from(
+      this.userRepository.findOne({ where: { mobile_number: loginDto.mobile_number } })
+    ).pipe(
+        map((user) => {
+          if (!user) {
+            throw new Error('User not found');
+          }
+
+          // Type assertion to ensure TypeScript knows this is a User object
+          const foundUser = user as User;
+
+          // Compare password using bcrypt
+          const isPasswordValid = bcrypt.compareSync(loginDto.password, foundUser.password);
+
+          if (!isPasswordValid) {
+            throw new Error('Invalid password');
+          }
+
+          // // Generate JWT token
+          // const token = jwt.sign({ user_id: foundUser.user_id, mobile_number: foundUser.mobile_number }, 'yourSecretKey', {
+          //   expiresIn: '1h',
+          // });
+
+          return {
+            success: true,
+            message: 'Login successfully',
+            // token,
+          };
+        }),
+        catchError((error) => {
+          return of({
+            success: false,
+            message: error.message || 'Error during login',
+          });
+        }),
+      );
+  }
 }
+  
+
