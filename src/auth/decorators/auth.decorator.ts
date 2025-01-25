@@ -63,13 +63,13 @@ export function UpdatePassword() {
     }),
   );
 }
-// Swagger decorator for verifying OTP
-export function VerifyOtp() {
+// Swagger decorator for sending OTP
+export function SendOtp() {
   return applyDecorators(
-    ApiOperation({ summary: 'Verify OTP for a user' }),
+    ApiOperation({ summary: 'Send OTP for a user' }),
     ApiResponse({
       status: 200,
-      description: 'OTP verified successfully.',
+      description: 'OTP Send successfully.',
     }),
     ApiResponse({
       status: 404,
@@ -77,7 +77,70 @@ export function VerifyOtp() {
     }),
   );
 }
-
+// Swagger decorator for verifying OTP
+export function VerifyOtp() {
+  return applyDecorators(
+    ApiOperation({ summary: 'Verify OTP for a user' }),  // Operation description
+    ApiParam({ name: 'userId', type: String, description: 'User ID for OTP verification' }),  // URL param
+    ApiBody({ 
+      description: 'OTP input for verification', 
+      schema: {
+        type: 'object',
+        properties: {
+          otp: { 
+            type: 'number', 
+            description: 'OTP sent to the user' 
+          }
+        },
+        required: ['otp'],  // You can add this if OTP is a required field
+      }
+    }),  // Body param (OTP)
+    ApiResponse({
+      status: 200,
+      description: 'OTP verified successfully.',
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Error verifying OTP.',
+    })
+  );
+}
+export function SendMessage() {
+  return applyDecorators(
+    ApiOperation({ summary: 'Send a message to a user' }),  // Operation description
+    ApiBody({
+      description: 'Message input for sending',
+      schema: {
+        type: 'object',
+        properties: {
+          phoneNumber: {
+            type: 'string',
+            description: 'Phone number to which the message will be sent',
+            example: '+1234567890',
+          },
+          message: {
+            type: 'string',
+            description: 'The message content to send',
+            example: 'Hello, your OTP is 123456',
+          },
+        },
+        required: ['phoneNumber', 'message'],  // Both phoneNumber and message are required
+      },
+    }),  // Request body containing phoneNumber and message
+    ApiResponse({
+      status: 200,
+      description: 'Message sent successfully.',
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Error sending the message.',
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Internal server error.',
+    }),
+  );
+}
 // Swagger decorator for updating profile details
 export function UpdateProfile() {
   return applyDecorators(

@@ -9,6 +9,9 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
+  // In-memory store (like session storage)
+  private otpStore = new Map<string, { otp: number, expiresAt: number }>();
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -17,7 +20,6 @@ export class AuthService {
   // Create a new user
   createUser(createUserDto: CreateUserDto): Observable<User> {
     const { mobile_number } = createUserDto;
-
     return from(
       this.userRepository.findOne({ where: { mobile_number } }).then((existingUser) => {
         if (existingUser) {
@@ -58,20 +60,55 @@ export class AuthService {
     );
   }
 
+  // send otp 
 
-  // Verify OTP
-  verifyOtp(userId: string): Observable<User> {
+  // Generate OTP and store it in memory with expiry time (1 minute validity)
+  sendOtp(userId: string): Observable<any> {
+    const otp = Math.floor(1000 + Math.random() * 9000); // Generate 4-digit OTP
+    const expiresAt = Date.now() + 60000; // OTP expires in 1 minute (60000 ms)
+
+    // Store OTP and expiry time in memory (acting as session storage)
+    this.otpStore.set(userId, { otp, expiresAt });
+
     return from(
       this.userRepository.findOne({ where: { user_id: userId } }).then(user => {
         if (user) {
-          user.otp_verified = true;
-          user.signup_status = 'otp_verified';
-          return this.userRepository.save(user);
+          return { otp, expiresAt };
         }
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }),
     );
   }
+
+  // Verify OTP using the in-memory store
+  verifyOtp(userId: string, inputOtp: number): Observable<any> {
+    const otpData = this.otpStore.get(userId);
+
+    if (otpData) {
+      // Check if OTP has expired
+      if (Date.now() > otpData.expiresAt) {
+        this.otpStore.delete(userId); // OTP expired, clear from store
+        throw new HttpException('OTP expired', HttpStatus.BAD_REQUEST);
+      }
+      if (otpData.otp === inputOtp) {
+        this.otpStore.delete(userId); // Clear OTP after successful validation
+        return from(
+          this.userRepository.findOne({ where: { user_id: userId } }).then(user => {
+            if (user) {
+              user.otp_verified = true;
+              user.signup_status = 'otp_verified';
+              return this.userRepository.save(user);
+            }
+            throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+          }),
+        );
+      } else {
+        throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
+      }
+    }
+    throw new HttpException('OTP not found for this user', HttpStatus.BAD_REQUEST);
+  }
+
 
   // Update profile details
   updateProfile(userId: string, profileDetails: object): Observable<User> {
@@ -162,40 +199,40 @@ export class AuthService {
     return from(
       this.userRepository.findOne({ where: { mobile_number: loginDto.mobile_number } })
     ).pipe(
-        map((user) => {
-          if (!user) {
-            throw new Error('User not found');
-          }
+      map((user) => {
+        if (!user) {
+          throw new Error('User not found');
+        }
 
-          // Type assertion to ensure TypeScript knows this is a User object
-          const foundUser = user as User;
+        // Type assertion to ensure TypeScript knows this is a User object
+        const foundUser = user as User;
 
-          // Compare password using bcrypt
-          const isPasswordValid = bcrypt.compareSync(loginDto.password, foundUser.password);
+        // Compare password using bcrypt
+        const isPasswordValid = bcrypt.compareSync(loginDto.password, foundUser.password);
 
-          if (!isPasswordValid) {
-            throw new Error('Invalid password');
-          }
+        if (!isPasswordValid) {
+          throw new Error('Invalid password');
+        }
 
-          // // Generate JWT token
-          // const token = jwt.sign({ user_id: foundUser.user_id, mobile_number: foundUser.mobile_number }, 'yourSecretKey', {
-          //   expiresIn: '1h',
-          // });
+        // // Generate JWT token
+        // const token = jwt.sign({ user_id: foundUser.user_id, mobile_number: foundUser.mobile_number }, 'yourSecretKey', {
+        //   expiresIn: '1h',
+        // });
 
-          return {
-            success: true,
-            message: 'Login successfully',
-            // token,
-          };
-        }),
-        catchError((error) => {
-          return of({
-            success: false,
-            message: error.message || 'Error during login',
-          });
-        }),
-      );
+        return {
+          success: true,
+          message: 'Login successfully',
+          // token,
+        };
+      }),
+      catchError((error) => {
+        return of({
+          success: false,
+          message: error.message || 'Error during login',
+        });
+      }),
+    );
   }
 }
-  
+
 
