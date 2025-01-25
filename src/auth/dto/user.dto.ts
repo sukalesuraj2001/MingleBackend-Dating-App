@@ -6,8 +6,8 @@ export class CreateUserDto {
     description: 'Mobile number for user registration',
     example: '1234567890',
   })
-  @IsString()
-  @IsNotEmpty()
+  // @IsString()
+  // @IsNotEmpty()
   mobile_number: string;
 }
 
