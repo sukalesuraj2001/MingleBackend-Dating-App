@@ -6,6 +6,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { User } from 'src/auth/entity/user.entity';
 import { CreateUserDto, GetUserDto, LoginDto } from 'src/auth/dto/user.dto';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private readonly jwtService: JwtService, // Inject JwtService
   ) { }
 
   // Create a new user
@@ -203,26 +205,27 @@ export class AuthService {
         if (!user) {
           throw new Error('User not found');
         }
-
+  
         // Type assertion to ensure TypeScript knows this is a User object
         const foundUser = user as User;
-
+  
         // Compare password using bcrypt
         const isPasswordValid = bcrypt.compareSync(loginDto.password, foundUser.password);
-
+  
         if (!isPasswordValid) {
           throw new Error('Invalid password');
         }
-
-        // // Generate JWT token
-        // const token = jwt.sign({ user_id: foundUser.user_id, mobile_number: foundUser.mobile_number }, 'yourSecretKey', {
-        //   expiresIn: '1h',
-        // });
-
+  
+        // Generate JWT token
+        const token = this.jwtService.sign(
+          { user_id: foundUser.user_id, mobile_number: foundUser.mobile_number },
+          { expiresIn: '1h' } // Token expires in 1 hour
+        );
+  
         return {
           success: true,
           message: 'Login successfully',
-          // token,
+          token,
         };
       }),
       catchError((error) => {
