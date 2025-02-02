@@ -3,7 +3,6 @@ import { Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { CreateUser, VerifyOtp, UpdateProfile, UpdateGender, UpdateInterests, GetAllUsers, UpdatePassword, GetUserByMobileNumber, loginUser, SendOtp, SendMessage } from 'src/auth/decorators/auth.decorator';
 import { CreateUserDto, UpdateProfileDto, UpdateGenderDto, UpdateInterestsDto, GetUserDto, PasswordDto, LoginDto } from 'src/auth/dto/user.dto';
-import { User } from 'src/auth/entity/user.entity';
 import { AuthService } from 'src/auth/services/auth/auth.service';
 import { MessageService } from 'src/auth/services/message/message/message.service';
 
